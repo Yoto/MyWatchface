@@ -1,21 +1,29 @@
 {
   "name": "minimal-jp-watchface",
   "author": "Custom",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "keywords": ["pebble-app"],
   "pebble": {
     "displayName": "Minimal JP",
-    "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "uuid": "70e9d542-2109-4b68-b7f9-172086312b64",
     "sdkVersion": "4",
     "targetPlatforms": [
-      "aplite",
-      "basalt",
-      "chalk",
-      "diorite"
+      "emery"
     ],
     "watchapp": {
       "watchface": true
     },
+    "capabilities": [
+      "location"
+    ],
+    "messageKeys": [
+      "KEY_TEMPERATURE",
+      "KEY_CONDITIONS",
+      "KEY_PRESSURE",
+      "KEY_FC_TEMPERATURE",
+      "KEY_FC_CONDITIONS",
+      "KEY_FC_PRESSURE"
+    ],
     "resources": {
       "media": []
     }
