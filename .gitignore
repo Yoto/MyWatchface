@@ -1,0 +1,13 @@
+# Pebble build artifacts
+build/
+dist/
+dist.zip
+
+# Waf
+.lock-waf*
+.waf-*
+waf-*
+
+# Editor / OS
+.DS_Store
+*.swp

@@ -1,12 +1,15 @@
 {
-  "name": "minimal-jp-watchface",
-  "author": "Custom",
-  "version": "2.0.0",
+  "name": "stencil-jp-watchface",
+  "author": "Yoto",
+  "version": "1.0.0",
   "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
   "pebble": {
-    "displayName": "Minimal JP",
-    "uuid": "70e9d542-2109-4b68-b7f9-172086312b64",
-    "sdkVersion": "4",
+    "displayName": "Stencil JP",
+    "uuid": "4f6f1046-9dd0-4d85-ab63-9da10681e567",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
     "targetPlatforms": [
       "emery"
     ],
@@ -17,12 +20,12 @@
       "location"
     ],
     "messageKeys": [
-      "KEY_TEMPERATURE",
-      "KEY_CONDITIONS",
-      "KEY_PRESSURE",
-      "KEY_FC_TEMPERATURE",
-      "KEY_FC_CONDITIONS",
-      "KEY_FC_PRESSURE"
+      "TEMPERATURE",
+      "CONDITIONS",
+      "PRESSURE",
+      "FC_TEMPERATURE",
+      "FC_CONDITIONS",
+      "FC_PRESSURE"
     ],
     "resources": {
       "media": []

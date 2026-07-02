@@ -4,25 +4,26 @@
 var API_KEY = 'YOUR_OPENWEATHERMAP_API_KEY';
 //             ↑ ここに実際のキーを貼り付ける (https://openweathermap.org/api)
 
-var UPDATE_INTERVAL_MS = 30 * 60 * 1000; // 30分ごと
+var UPDATE_INTERVAL_MS = 30 * 60 * 1000; // 30分ごとに更新
 var FORECAST_AHEAD_SEC = 6 * 60 * 60;    // 約6時間後の予報を使う
 
-function xhrRequest(url, type, callback, errorCallback) {
+function xhrRequest(url, callback, errorCallback) {
   var xhr = new XMLHttpRequest();
   xhr.onload = function () {
     if (xhr.status === 200) {
       callback(xhr.responseText);
-    } else if (errorCallback) {
+    } else {
       errorCallback('HTTP ' + xhr.status);
     }
   };
   xhr.onerror = function () {
-    if (errorCallback) errorCallback('network error');
+    errorCallback('network error');
   };
-  xhr.open(type, url);
+  xhr.open('GET', url);
   xhr.send();
 }
 
+// 3時間刻みの予報リストから目標時刻に最も近いエントリを選ぶ
 function pickForecastEntry(list) {
   var target = Date.now() / 1000 + FORECAST_AHEAD_SEC;
   var best = list[0];
@@ -38,35 +39,27 @@ function pickForecastEntry(list) {
 }
 
 function fetchWeather(lat, lon) {
-  var currentUrl = 'https://api.openweathermap.org/data/2.5/weather?lat=' +
-    lat + '&lon=' + lon + '&units=metric&appid=' + API_KEY;
-  var forecastUrl = 'https://api.openweathermap.org/data/2.5/forecast?lat=' +
-    lat + '&lon=' + lon + '&units=metric&appid=' + API_KEY;
+  var query = 'lat=' + lat + '&lon=' + lon + '&units=metric&appid=' + API_KEY;
+  var currentUrl = 'https://api.openweathermap.org/data/2.5/weather?' + query;
+  var forecastUrl = 'https://api.openweathermap.org/data/2.5/forecast?' + query;
 
-  xhrRequest(currentUrl, 'GET', function (currentText) {
+  xhrRequest(currentUrl, function (currentText) {
     var current = JSON.parse(currentText);
-    var temperature = Math.round(current.main.temp);
-    var conditions = current.weather[0].main;
-    var pressure = Math.round(current.main.pressure);
 
-    xhrRequest(forecastUrl, 'GET', function (forecastText) {
-      var forecast = JSON.parse(forecastText);
-      var entry = pickForecastEntry(forecast.list);
-      var fcTemperature = Math.round(entry.main.temp);
-      var fcConditions = entry.weather[0].main;
-      var fcPressure = Math.round(entry.main.pressure);
+    xhrRequest(forecastUrl, function (forecastText) {
+      var entry = pickForecastEntry(JSON.parse(forecastText).list);
 
       Pebble.sendAppMessage({
-        'KEY_TEMPERATURE': temperature,
-        'KEY_CONDITIONS': conditions,
-        'KEY_PRESSURE': pressure,
-        'KEY_FC_TEMPERATURE': fcTemperature,
-        'KEY_FC_CONDITIONS': fcConditions,
-        'KEY_FC_PRESSURE': fcPressure
+        'TEMPERATURE': Math.round(current.main.temp),
+        'CONDITIONS': current.weather[0].main,
+        'PRESSURE': Math.round(current.main.pressure),
+        'FC_TEMPERATURE': Math.round(entry.main.temp),
+        'FC_CONDITIONS': entry.weather[0].main,
+        'FC_PRESSURE': Math.round(entry.main.pressure)
       }, function () {
         console.log('Weather sent to watch.');
       }, function (e) {
-        console.log('Error sending weather to watch: ' + e.error.message);
+        console.log('Error sending weather to watch: ' + JSON.stringify(e));
       });
     }, function (err) {
       console.log('Forecast request failed: ' + err);
@@ -92,8 +85,4 @@ Pebble.addEventListener('ready', function () {
   console.log('PebbleKit JS ready.');
   getWeather();
   setInterval(getWeather, UPDATE_INTERVAL_MS);
-});
-
-Pebble.addEventListener('appmessage', function () {
-  getWeather();
 });
