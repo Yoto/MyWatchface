@@ -28,7 +28,20 @@
       "FC_PRESSURE"
     ],
     "resources": {
-      "media": []
+      "media": [
+        {
+          "type": "font",
+          "name": "FONT_ROBOTO_BOLD_80",
+          "file": "fonts/Roboto-Bold.ttf",
+          "characterRegex": "[0-9]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_ROBOTO_BOLD_44",
+          "file": "fonts/Roboto-Bold.ttf",
+          "characterRegex": "[0-9A-Z]"
+        }
+      ]
     }
   }
 }

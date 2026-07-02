@@ -9,25 +9,32 @@
 //   3段目: 和暦 (左) / 西暦 (右)
 //   4段目: 現在の天気   例) 17C, Clouds, 1007hPa
 //   5段目: 約6時間後の予報
-// 大きな文字にはオリジナルのステンシル風フォントを模した
-// 斜め格子 (クロスハッチ) のテクスチャを重ねて描画する。
+// 大きな文字は同梱の Roboto Bold (時刻 80px / 日付・年 44px) で描画し、
+// オリジナルのステンシル風フォントを模した斜め格子 (クロスハッチ) の
+// テクスチャを重ねる。
 // ---------------------------------------------------------------------------
 
 // レイアウト定数 (emery: 200 x 228)
-#define ROW_DATE_Y     4
-#define ROW_DATE_H     40
-#define ROW_TIME_Y     48
-#define ROW_TIME_H     64
-#define ROW_ERA_Y      120
-#define ROW_ERA_H      40
-#define HATCH_BOTTOM   168   // ここまでの領域に格子模様を重ねる
-#define ROW_WX_NOW_Y   176
+// 大きな文字はカスタムフォント (Roboto Bold 80 / 44) で描画する。
+// フレームの y はフォントのアセント分 (文字上部の余白) を見込んで詰めてある。
+#define ROW_DATE_Y     (-6)
+#define ROW_DATE_H     58
+#define ROW_TIME_Y     40
+#define ROW_TIME_H     102
+#define ROW_ERA_Y      116
+#define ROW_ERA_H      58
+#define HATCH_BOTTOM   170   // ここまでの領域に格子模様を重ねる
+#define ROW_WX_NOW_Y   174
 #define ROW_WX_FC_Y    200
-#define ROW_WX_H       24
+#define ROW_WX_H       26
 #define SIDE_MARGIN    6
+#define DATE_SPLIT_X   106   // 月/日の境界
+#define ERA_SPLIT_X    92    // 和暦/西暦の境界
 #define HATCH_STEP     5     // 格子の間隔 (px)
 
 static Window    *s_window;
+static GFont      s_font_big;   // 時刻用 Roboto Bold 80
+static GFont      s_font_med;   // 月日・和暦西暦用 Roboto Bold 44
 static TextLayer *s_month_layer;
 static TextLayer *s_day_layer;
 static TextLayer *s_time_layer;
@@ -149,12 +156,12 @@ static void inbox_dropped_callback(AppMessageResult reason, void *context) {
 // ---------------------------------------------------------------------------
 // ウィンドウ
 // ---------------------------------------------------------------------------
-static TextLayer *make_text_layer(Layer *root, GRect frame, const char *font_key,
+static TextLayer *make_text_layer(Layer *root, GRect frame, GFont font,
                                   GTextAlignment align) {
     TextLayer *layer = text_layer_create(frame);
     text_layer_set_background_color(layer, GColorClear);
     text_layer_set_text_color(layer, GColorWhite);
-    text_layer_set_font(layer, fonts_get_system_font(font_key));
+    text_layer_set_font(layer, font);
     text_layer_set_text_alignment(layer, align);
     layer_add_child(root, text_layer_get_layer(layer));
     return layer;
@@ -167,26 +174,31 @@ static void window_load(Window *window) {
 
     window_set_background_color(window, GColorBlack);
 
+    s_font_big = fonts_load_custom_font(
+        resource_get_handle(RESOURCE_ID_FONT_ROBOTO_BOLD_80));
+    s_font_med = fonts_load_custom_font(
+        resource_get_handle(RESOURCE_ID_FONT_ROBOTO_BOLD_44));
+
     // 1段目: 月 (左) / 日 (右)
     s_month_layer = make_text_layer(root,
-        GRect(SIDE_MARGIN, ROW_DATE_Y, w / 2, ROW_DATE_H),
-        FONT_KEY_BITHAM_30_BLACK, GTextAlignmentLeft);
+        GRect(SIDE_MARGIN, ROW_DATE_Y, DATE_SPLIT_X - SIDE_MARGIN, ROW_DATE_H),
+        s_font_med, GTextAlignmentLeft);
     s_day_layer = make_text_layer(root,
-        GRect(w / 2, ROW_DATE_Y, w / 2 - SIDE_MARGIN, ROW_DATE_H),
-        FONT_KEY_BITHAM_30_BLACK, GTextAlignmentRight);
+        GRect(DATE_SPLIT_X, ROW_DATE_Y, w - DATE_SPLIT_X - SIDE_MARGIN, ROW_DATE_H),
+        s_font_med, GTextAlignmentRight);
 
     // 2段目: 時刻 (コロンなし)
     s_time_layer = make_text_layer(root,
         GRect(0, ROW_TIME_Y, w, ROW_TIME_H),
-        FONT_KEY_ROBOTO_BOLD_SUBSET_49, GTextAlignmentCenter);
+        s_font_big, GTextAlignmentCenter);
 
     // 3段目: 和暦 (左) / 西暦 (右)
     s_era_layer = make_text_layer(root,
-        GRect(SIDE_MARGIN, ROW_ERA_Y, w / 2, ROW_ERA_H),
-        FONT_KEY_BITHAM_30_BLACK, GTextAlignmentLeft);
+        GRect(SIDE_MARGIN, ROW_ERA_Y, ERA_SPLIT_X - SIDE_MARGIN, ROW_ERA_H),
+        s_font_med, GTextAlignmentLeft);
     s_year_layer = make_text_layer(root,
-        GRect(w / 2, ROW_ERA_Y, w / 2 - SIDE_MARGIN, ROW_ERA_H),
-        FONT_KEY_BITHAM_30_BLACK, GTextAlignmentRight);
+        GRect(ERA_SPLIT_X, ROW_ERA_Y, w - ERA_SPLIT_X - SIDE_MARGIN, ROW_ERA_H),
+        s_font_med, GTextAlignmentRight);
 
     // 大きな文字の上に重ねるステンシル風テクスチャ
     s_hatch_layer = layer_create(GRect(0, 0, w, HATCH_BOTTOM));
@@ -196,11 +208,11 @@ static void window_load(Window *window) {
     // 4-5段目: 天気 (テクスチャなし)
     s_weather_now_layer = make_text_layer(root,
         GRect(SIDE_MARGIN, ROW_WX_NOW_Y, w - SIDE_MARGIN * 2, ROW_WX_H),
-        FONT_KEY_GOTHIC_18_BOLD, GTextAlignmentLeft);
+        fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft);
     text_layer_set_text(s_weather_now_layer, s_weather_now_buf);
     s_weather_fc_layer = make_text_layer(root,
         GRect(SIDE_MARGIN, ROW_WX_FC_Y, w - SIDE_MARGIN * 2, ROW_WX_H),
-        FONT_KEY_GOTHIC_18_BOLD, GTextAlignmentLeft);
+        fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft);
     text_layer_set_text(s_weather_fc_layer, s_weather_fc_buf);
 
     time_t now = time(NULL);
@@ -216,6 +228,8 @@ static void window_unload(Window *window) {
     layer_destroy(s_hatch_layer);
     text_layer_destroy(s_weather_now_layer);
     text_layer_destroy(s_weather_fc_layer);
+    fonts_unload_custom_font(s_font_big);
+    fonts_unload_custom_font(s_font_med);
 }
 
 static void init(void) {
