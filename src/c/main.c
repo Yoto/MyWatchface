@@ -7,51 +7,35 @@
 //   1段目: 月 (左) / 日 (右)
 //   2段目: 時刻 (HHMM, コロンなし・大)
 //   3段目: 和暦 (左) / 西暦 (右)
-//   4段目: 現在の天気   例) 17C, Clouds, 1007hPa
-//   5段目: 約6時間後の予報
-// 大きな文字は同梱の Khand Bold (時刻 100px / 日付・年 54px) で描画し、
-// オリジナルのステンシル風フォントを模した斜め格子 (クロスハッチ) の
-// テクスチャを重ねる。
+// 文字は Black Mustang (時刻 116px / ほか 62px) で描画し、オリジナルの
+// ステンシル風フォントを模した斜め格子 (クロスハッチ) のテクスチャを
+// 全面に重ねる。
 // ---------------------------------------------------------------------------
 
 // レイアウト定数 (emery: 200 x 228)
-// 大きな文字はカスタムフォント (Khand Bold 100 / 54) で描画する。
-// Khand はアセント (1.05em) がキャップハイト (0.693em) より大きく文字の上に
-// 余白が出るため、フレームの y をその分 (0.357em) 上へずらして詰めてある。
-#define ROW_DATE_Y     (-17)
-#define ROW_DATE_H     60
-#define ROW_TIME_Y     9
-#define ROW_TIME_H     112
-#define ROW_ERA_Y      101
-#define ROW_ERA_H      60
-#define HATCH_BOTTOM   162   // ここまでの領域に格子模様を重ねる
-#define ROW_WX_NOW_Y   166
-#define ROW_WX_FC_Y    194
-#define ROW_WX_H       26
+// Black Mustang はアセント (1.084em) がキャップハイト (0.803em) より大きく
+// 文字の上に余白が出るため、フレームの y をその分 (0.281em) 上へずらし、
+// 3段が画面全体に均等に広がるよう配置している。
+#define ROW_DATE_Y     (-16)
+#define ROW_DATE_H     72
+#define ROW_TIME_Y     35
+#define ROW_TIME_H     132
+#define ROW_ERA_Y      158
+#define ROW_ERA_H      70
 #define SIDE_MARGIN    6
 #define DATE_SPLIT_X   106   // 月/日の境界
 #define ERA_SPLIT_X    92    // 和暦/西暦の境界
 #define HATCH_STEP     5     // 格子の間隔 (px)
 
 static Window    *s_window;
-static GFont      s_font_big;   // 時刻用 Khand Bold 100
-static GFont      s_font_med;   // 月日・和暦西暦用 Khand Bold 54
+static GFont      s_font_big;   // 時刻用 Black Mustang 116px
+static GFont      s_font_med;   // 月日・和暦西暦用 Black Mustang 62px
 static TextLayer *s_month_layer;
 static TextLayer *s_day_layer;
 static TextLayer *s_time_layer;
 static TextLayer *s_era_layer;
 static TextLayer *s_year_layer;
 static Layer     *s_hatch_layer;
-static TextLayer *s_weather_now_layer;
-static TextLayer *s_weather_fc_layer;
-
-static char s_weather_now_buf[40] = "--";
-static char s_weather_fc_buf[40]  = "--";
-
-enum {
-    PERSIST_WEATHER_NOW = 1,
-    PERSIST_WEATHER_FC  = 2,
-};
 
 // ---------------------------------------------------------------------------
 // 和暦計算 (令和 / 平成 / 昭和 / 大正)
@@ -123,38 +107,6 @@ static void tick_handler(struct tm *tick_time, TimeUnits changed) {
 }
 
 // ---------------------------------------------------------------------------
-// 天気 (PebbleKit JS から AppMessage 経由で受信)
-// ---------------------------------------------------------------------------
-static void inbox_received_callback(DictionaryIterator *iter, void *context) {
-    Tuple *temp    = dict_find(iter, MESSAGE_KEY_TEMPERATURE);
-    Tuple *cond    = dict_find(iter, MESSAGE_KEY_CONDITIONS);
-    Tuple *pres    = dict_find(iter, MESSAGE_KEY_PRESSURE);
-    Tuple *fc_temp = dict_find(iter, MESSAGE_KEY_FC_TEMPERATURE);
-    Tuple *fc_cond = dict_find(iter, MESSAGE_KEY_FC_CONDITIONS);
-    Tuple *fc_pres = dict_find(iter, MESSAGE_KEY_FC_PRESSURE);
-
-    if (temp && cond && pres) {
-        snprintf(s_weather_now_buf, sizeof(s_weather_now_buf), "%dC, %s, %dhPa",
-                 (int)temp->value->int32, cond->value->cstring,
-                 (int)pres->value->int32);
-        text_layer_set_text(s_weather_now_layer, s_weather_now_buf);
-        persist_write_string(PERSIST_WEATHER_NOW, s_weather_now_buf);
-    }
-
-    if (fc_temp && fc_cond && fc_pres) {
-        snprintf(s_weather_fc_buf, sizeof(s_weather_fc_buf), "%dC, %s, %dhPa",
-                 (int)fc_temp->value->int32, fc_cond->value->cstring,
-                 (int)fc_pres->value->int32);
-        text_layer_set_text(s_weather_fc_layer, s_weather_fc_buf);
-        persist_write_string(PERSIST_WEATHER_FC, s_weather_fc_buf);
-    }
-}
-
-static void inbox_dropped_callback(AppMessageResult reason, void *context) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "AppMessage dropped: %d", (int)reason);
-}
-
-// ---------------------------------------------------------------------------
 // ウィンドウ
 // ---------------------------------------------------------------------------
 static TextLayer *make_text_layer(Layer *root, GRect frame, GFont font,
@@ -176,9 +128,9 @@ static void window_load(Window *window) {
     window_set_background_color(window, GColorBlack);
 
     s_font_big = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_KHAND_BOLD_100));
+        resource_get_handle(RESOURCE_ID_FONT_BLACK_MUSTANG_116));
     s_font_med = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_KHAND_BOLD_54));
+        resource_get_handle(RESOURCE_ID_FONT_BLACK_MUSTANG_62));
 
     // 1段目: 月 (左) / 日 (右)
     s_month_layer = make_text_layer(root,
@@ -201,20 +153,10 @@ static void window_load(Window *window) {
         GRect(ERA_SPLIT_X, ROW_ERA_Y, w - ERA_SPLIT_X - SIDE_MARGIN, ROW_ERA_H),
         s_font_med, GTextAlignmentRight);
 
-    // 大きな文字の上に重ねるステンシル風テクスチャ
-    s_hatch_layer = layer_create(GRect(0, 0, w, HATCH_BOTTOM));
+    // 全面に重ねるステンシル風テクスチャ
+    s_hatch_layer = layer_create(bounds);
     layer_set_update_proc(s_hatch_layer, hatch_update_proc);
     layer_add_child(root, s_hatch_layer);
-
-    // 4-5段目: 天気 (テクスチャなし)
-    s_weather_now_layer = make_text_layer(root,
-        GRect(SIDE_MARGIN, ROW_WX_NOW_Y, w - SIDE_MARGIN * 2, ROW_WX_H),
-        fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft);
-    text_layer_set_text(s_weather_now_layer, s_weather_now_buf);
-    s_weather_fc_layer = make_text_layer(root,
-        GRect(SIDE_MARGIN, ROW_WX_FC_Y, w - SIDE_MARGIN * 2, ROW_WX_H),
-        fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft);
-    text_layer_set_text(s_weather_fc_layer, s_weather_fc_buf);
 
     time_t now = time(NULL);
     update_display(localtime(&now));
@@ -227,22 +169,11 @@ static void window_unload(Window *window) {
     text_layer_destroy(s_era_layer);
     text_layer_destroy(s_year_layer);
     layer_destroy(s_hatch_layer);
-    text_layer_destroy(s_weather_now_layer);
-    text_layer_destroy(s_weather_fc_layer);
     fonts_unload_custom_font(s_font_big);
     fonts_unload_custom_font(s_font_med);
 }
 
 static void init(void) {
-    if (persist_exists(PERSIST_WEATHER_NOW)) {
-        persist_read_string(PERSIST_WEATHER_NOW,
-                            s_weather_now_buf, sizeof(s_weather_now_buf));
-    }
-    if (persist_exists(PERSIST_WEATHER_FC)) {
-        persist_read_string(PERSIST_WEATHER_FC,
-                            s_weather_fc_buf, sizeof(s_weather_fc_buf));
-    }
-
     s_window = window_create();
     window_set_window_handlers(s_window, (WindowHandlers){
         .load   = window_load,
@@ -251,10 +182,6 @@ static void init(void) {
     window_stack_push(s_window, true);
 
     tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-
-    app_message_register_inbox_received(inbox_received_callback);
-    app_message_register_inbox_dropped(inbox_dropped_callback);
-    app_message_open(256, 64);
 }
 
 static void deinit(void) {

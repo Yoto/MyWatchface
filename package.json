@@ -16,29 +16,18 @@
     "watchapp": {
       "watchface": true
     },
-    "capabilities": [
-      "location"
-    ],
-    "messageKeys": [
-      "TEMPERATURE",
-      "CONDITIONS",
-      "PRESSURE",
-      "FC_TEMPERATURE",
-      "FC_CONDITIONS",
-      "FC_PRESSURE"
-    ],
     "resources": {
       "media": [
         {
           "type": "font",
-          "name": "FONT_KHAND_BOLD_100",
-          "file": "fonts/Khand-Bold.ttf",
+          "name": "FONT_BLACK_MUSTANG_116",
+          "file": "fonts/BlackMustang.ttf",
           "characterRegex": "[0-9]"
         },
         {
           "type": "font",
-          "name": "FONT_KHAND_BOLD_54",
-          "file": "fonts/Khand-Bold.ttf",
+          "name": "FONT_BLACK_MUSTANG_62",
+          "file": "fonts/BlackMustang.ttf",
           "characterRegex": "[0-9A-Z]"
         }
       ]
