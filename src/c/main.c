@@ -7,29 +7,29 @@
 //   1段目: 月 (左) / 日 (右)
 //   2段目: 時刻 (HHMM, コロンなし・大)
 //   3段目: 和暦 (左) / 西暦 (右)
-// 文字はデジタル時計風のピクセルフォント Jersey 10 (時刻 112px / ほか 62px)
-// で描画し、オリジナルのステンシル風フォントを模した斜め格子 (クロス
-// ハッチ) のテクスチャを全面に重ねる。
+// 文字は Black Mustang (時刻 116px / ほか 62px) で描画し、オリジナルの
+// ステンシル風フォントを模した斜め格子 (クロスハッチ) のテクスチャを
+// 全面に重ねる。
 // ---------------------------------------------------------------------------
 
 // レイアウト定数 (emery: 200 x 228)
-// Jersey 10 はアセント (0.804em) がキャップハイト (0.536em) より大きく
-// 文字の上に余白が出るため、フレームの y をその分 (0.268em) 上へずらし、
+// Black Mustang はアセント (1.084em) がキャップハイト (0.803em) より大きく
+// 文字の上に余白が出るため、フレームの y をその分 (0.281em) 上へずらし、
 // 3段が画面全体に均等に広がるよう配置している。
-#define ROW_DATE_Y     (-13)
-#define ROW_DATE_H     56
-#define ROW_TIME_Y     52
-#define ROW_TIME_H     102
-#define ROW_ERA_Y      176
-#define ROW_ERA_H      52
+#define ROW_DATE_Y     (-16)
+#define ROW_DATE_H     72
+#define ROW_TIME_Y     35
+#define ROW_TIME_H     132
+#define ROW_ERA_Y      158
+#define ROW_ERA_H      70
 #define SIDE_MARGIN    6
 #define DATE_SPLIT_X   106   // 月/日の境界
 #define ERA_SPLIT_X    92    // 和暦/西暦の境界
 #define HATCH_STEP     5     // 格子の間隔 (px)
 
 static Window    *s_window;
-static GFont      s_font_big;   // 時刻用 Jersey 10 112px
-static GFont      s_font_med;   // 月日・和暦西暦用 Jersey 10 62px
+static GFont      s_font_big;   // 時刻用 Black Mustang 116px
+static GFont      s_font_med;   // 月日・和暦西暦用 Black Mustang 62px
 static TextLayer *s_month_layer;
 static TextLayer *s_day_layer;
 static TextLayer *s_time_layer;
@@ -128,9 +128,9 @@ static void window_load(Window *window) {
     window_set_background_color(window, GColorBlack);
 
     s_font_big = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_JERSEY10_112));
+        resource_get_handle(RESOURCE_ID_FONT_BLACK_MUSTANG_116));
     s_font_med = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_JERSEY10_62));
+        resource_get_handle(RESOURCE_ID_FONT_BLACK_MUSTANG_62));
 
     // 1段目: 月 (左) / 日 (右)
     s_month_layer = make_text_layer(root,

@@ -20,14 +20,14 @@
       "media": [
         {
           "type": "font",
-          "name": "FONT_JERSEY10_112",
-          "file": "fonts/Jersey10-Regular.ttf",
+          "name": "FONT_BLACK_MUSTANG_116",
+          "file": "fonts/BlackMustang.ttf",
           "characterRegex": "[0-9]"
         },
         {
           "type": "font",
-          "name": "FONT_JERSEY10_62",
-          "file": "fonts/Jersey10-Regular.ttf",
+          "name": "FONT_BLACK_MUSTANG_62",
+          "file": "fonts/BlackMustang.ttf",
           "characterRegex": "[0-9A-Z]"
         }
       ]
