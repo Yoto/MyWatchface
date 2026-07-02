@@ -7,9 +7,7 @@
 //   1段目: 月 (左) / 日 (右)
 //   2段目: 時刻 (HHMM, コロンなし・大)
 //   3段目: 和暦 (左) / 西暦 (右)
-// 文字は Black Mustang (時刻 116px / ほか 62px) で描画し、オリジナルの
-// ステンシル風フォントを模した斜め格子 (クロスハッチ) のテクスチャを
-// 全面に重ねる。
+// 文字は Black Mustang (時刻 116px / ほか 62px) で描画する。
 // ---------------------------------------------------------------------------
 
 // レイアウト定数 (emery: 200 x 228)
@@ -25,7 +23,6 @@
 #define SIDE_MARGIN    6
 #define DATE_SPLIT_X   106   // 月/日の境界
 #define ERA_SPLIT_X    92    // 和暦/西暦の境界
-#define HATCH_STEP     5     // 格子の間隔 (px)
 
 static Window    *s_window;
 static GFont      s_font_big;   // 時刻用 Black Mustang 116px
@@ -35,7 +32,6 @@ static TextLayer *s_day_layer;
 static TextLayer *s_time_layer;
 static TextLayer *s_era_layer;
 static TextLayer *s_year_layer;
-static Layer     *s_hatch_layer;
 
 // ---------------------------------------------------------------------------
 // 和暦計算 (令和 / 平成 / 昭和 / 大正)
@@ -57,20 +53,6 @@ static void get_wareki(const struct tm *t, char *buf, size_t n) {
         era = "T";  ey = y - 1911;
     }
     snprintf(buf, n, "%s%d", era, ey);
-}
-
-// ---------------------------------------------------------------------------
-// ステンシル風テクスチャ
-// 白い文字の上から背景色の斜線を両方向に引き、格子模様を浮かび上がらせる
-// ---------------------------------------------------------------------------
-static void hatch_update_proc(Layer *layer, GContext *ctx) {
-    GRect b = layer_get_bounds(layer);
-    graphics_context_set_stroke_color(ctx, GColorBlack);
-    graphics_context_set_stroke_width(ctx, 1);
-    for (int x = -b.size.h; x < b.size.w; x += HATCH_STEP) {
-        graphics_draw_line(ctx, GPoint(x, 0), GPoint(x + b.size.h, b.size.h));
-        graphics_draw_line(ctx, GPoint(x + b.size.h, 0), GPoint(x, b.size.h));
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -153,11 +135,6 @@ static void window_load(Window *window) {
         GRect(ERA_SPLIT_X, ROW_ERA_Y, w - ERA_SPLIT_X - SIDE_MARGIN, ROW_ERA_H),
         s_font_med, GTextAlignmentRight);
 
-    // 全面に重ねるステンシル風テクスチャ
-    s_hatch_layer = layer_create(bounds);
-    layer_set_update_proc(s_hatch_layer, hatch_update_proc);
-    layer_add_child(root, s_hatch_layer);
-
     time_t now = time(NULL);
     update_display(localtime(&now));
 }
@@ -168,7 +145,6 @@ static void window_unload(Window *window) {
     text_layer_destroy(s_time_layer);
     text_layer_destroy(s_era_layer);
     text_layer_destroy(s_year_layer);
-    layer_destroy(s_hatch_layer);
     fonts_unload_custom_font(s_font_big);
     fonts_unload_custom_font(s_font_med);
 }
