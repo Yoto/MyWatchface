@@ -17,7 +17,7 @@
 └────────────────────┘
 ```
 
-- 大きな文字は同梱の Roboto Bold(時刻 80px、日付・年 44px)で描画し、Pebble Time 2 の 200×228px 画面いっぱいに表示します。
+- 大きな文字は同梱の角張ったフォント Khand Bold(時刻 100px、日付・年 54px)で描画し、Pebble Time 2 の 200×228px 画面いっぱいに表示します。
 - 大きな文字にはオリジナルのステンシル風フォントを模した**斜め格子模様**をオーバーレイ描画で再現しています。
 - 和暦は令和・平成・昭和・大正に対応し、自動計算されます (例: 2026年 → `R8`)。
 - 時刻は Pebble 本体の 12/24 時間設定に追従します。
@@ -53,8 +53,8 @@ pebble install --phone <スマートフォンのIPアドレス>
 | --- | --- |
 | `src/c/main.c` | 文字盤本体 (レイアウト・和暦計算・格子テクスチャ・天気受信) |
 | `src/pkjs/index.js` | PebbleKit JS (位置情報の取得と OpenWeatherMap への問い合わせ) |
-| `resources/fonts/Roboto-Bold.ttf` | 大きな文字用フォント (ビルド時に数字・英大文字のみに絞って収録) |
+| `resources/fonts/Khand-Bold.ttf` | 大きな文字用フォント (ビルド時に数字・英大文字のみに絞って収録) |
 | `package.json` | プロジェクト定義 (対象プラットフォーム: emery、フォントリソース) |
 | `wscript` | ビルドスクリプト |
 
-Roboto フォントは [Apache License 2.0](https://fonts.google.com/specimen/Roboto/license) で提供されています。
+Khand フォント (Indian Type Foundry) は [SIL Open Font License 1.1](https://fonts.google.com/specimen/Khand/license) で提供されています。
