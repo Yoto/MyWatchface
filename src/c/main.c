@@ -14,12 +14,14 @@
 // Black Mustang はアセント (1.084em) がキャップハイト (0.803em) より大きく
 // 文字の上に余白が出るため、フレームの y をその分 (0.281em) 上へずらし、
 // 3段が画面全体に均等に広がるよう配置している。
-#define ROW_DATE_Y     (-16)
+// 実機ではベゼル際の数ピクセルが見えないため、上下に 6px の
+// 安全マージンを確保している (文字の実描画位置: 6..222)。
+#define ROW_DATE_Y     (-11)
 #define ROW_DATE_H     72
-#define ROW_TIME_Y     35
+#define ROW_TIME_Y     34
 #define ROW_TIME_H     132
-#define ROW_ERA_Y      158
-#define ROW_ERA_H      70
+#define ROW_ERA_Y      155
+#define ROW_ERA_H      73
 #define SIDE_MARGIN    6
 #define DATE_SPLIT_X   106   // 月/日の境界
 #define ERA_SPLIT_X    92    // 和暦/西暦の境界
