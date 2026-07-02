@@ -1,67 +1,100 @@
 #include <pebble.h>
 
 // ---------------------------------------------------------------------------
-// レイヤー (Pebble Time 2 / emery, 200 x 228 px)
-// 1段目: 月(左) / 日(右)         BITHAM_30_BLACK
-// 2段目: 時刻                    ROBOTO_BOLD_SUBSET_49
-// 3段目: 和暦元号(左) / 西暦(右)  BITHAM_30_BLACK
-// 4段目: 現在の天気              GOTHIC_14_BOLD
-// 5段目: 約6時間後の予報          GOTHIC_14_BOLD
+// Stencil JP - Pebble Time 2 (emery, 200 x 228 px) 用ウォッチフェイス
+//
+// 初代 Pebble 向けに作成した文字盤の移植版。
+//   1段目: 月 (左) / 日 (右)
+//   2段目: 時刻 (HHMM, コロンなし・大)
+//   3段目: 和暦 (左) / 西暦 (右)
+//   4段目: 現在の天気   例) 17C, Clouds, 1007hPa
+//   5段目: 約6時間後の予報
+// 大きな文字にはオリジナルのステンシル風フォントを模した
+// 斜め格子 (クロスハッチ) のテクスチャを重ねて描画する。
 // ---------------------------------------------------------------------------
-static Window     *s_window;
-static TextLayer  *s_month_layer;
-static TextLayer  *s_day_layer;
-static TextLayer  *s_time_layer;
-static TextLayer  *s_era_layer;
-static TextLayer  *s_year_layer;
-static TextLayer  *s_weather_now_layer;
-static TextLayer  *s_weather_fc_layer;
 
-static char s_weather_now_buf[32] = "--";
-static char s_weather_fc_buf[32]  = "--";
+// レイアウト定数 (emery: 200 x 228)
+#define ROW_DATE_Y     4
+#define ROW_DATE_H     40
+#define ROW_TIME_Y     48
+#define ROW_TIME_H     64
+#define ROW_ERA_Y      120
+#define ROW_ERA_H      40
+#define HATCH_BOTTOM   168   // ここまでの領域に格子模様を重ねる
+#define ROW_WX_NOW_Y   176
+#define ROW_WX_FC_Y    200
+#define ROW_WX_H       24
+#define SIDE_MARGIN    6
+#define HATCH_STEP     5     // 格子の間隔 (px)
+
+static Window    *s_window;
+static TextLayer *s_month_layer;
+static TextLayer *s_day_layer;
+static TextLayer *s_time_layer;
+static TextLayer *s_era_layer;
+static TextLayer *s_year_layer;
+static Layer     *s_hatch_layer;
+static TextLayer *s_weather_now_layer;
+static TextLayer *s_weather_fc_layer;
+
+static char s_weather_now_buf[40] = "--";
+static char s_weather_fc_buf[40]  = "--";
 
 enum {
-  PERSIST_WEATHER_NOW = 1,
-  PERSIST_WEATHER_FC  = 2,
+    PERSIST_WEATHER_NOW = 1,
+    PERSIST_WEATHER_FC  = 2,
 };
 
 // ---------------------------------------------------------------------------
-// 和暦計算
+// 和暦計算 (令和 / 平成 / 昭和 / 大正)
 // ---------------------------------------------------------------------------
-static void get_wareki(const struct tm *t,
-                       char *era_buf,  size_t era_n,
-                       char *year_buf, size_t year_n) {
+static void get_wareki(const struct tm *t, char *buf, size_t n) {
     int y = t->tm_year + 1900;
-    int m = t->tm_mon  + 1;
+    int m = t->tm_mon + 1;
     int d = t->tm_mday;
     const char *era;
     int ey;
 
-    if (y > 2019 || (y == 2019 && m > 4)) {
+    if (y > 2019 || (y == 2019 && m >= 5)) {
         era = "R";  ey = y - 2018;
-    } else if (y > 1989 || (y == 1989 && (m > 1 || (m == 1 && d >= 8)))) {
+    } else if (y > 1989 || (y == 1989 && (m > 1 || d >= 8))) {
         era = "H";  ey = y - 1988;
     } else if (y > 1926 || (y == 1926 && m == 12 && d >= 25)) {
         era = "S";  ey = y - 1925;
     } else {
         era = "T";  ey = y - 1911;
     }
-    snprintf(era_buf,  era_n,  "%s%d", era, ey);
-    snprintf(year_buf, year_n, "%d",   y);
+    snprintf(buf, n, "%s%d", era, ey);
+}
+
+// ---------------------------------------------------------------------------
+// ステンシル風テクスチャ
+// 白い文字の上から背景色の斜線を両方向に引き、格子模様を浮かび上がらせる
+// ---------------------------------------------------------------------------
+static void hatch_update_proc(Layer *layer, GContext *ctx) {
+    GRect b = layer_get_bounds(layer);
+    graphics_context_set_stroke_color(ctx, GColorBlack);
+    graphics_context_set_stroke_width(ctx, 1);
+    for (int x = -b.size.h; x < b.size.w; x += HATCH_STEP) {
+        graphics_draw_line(ctx, GPoint(x, 0), GPoint(x + b.size.h, b.size.h));
+        graphics_draw_line(ctx, GPoint(x + b.size.h, 0), GPoint(x, b.size.h));
+    }
 }
 
 // ---------------------------------------------------------------------------
 // 画面更新
 // ---------------------------------------------------------------------------
 static void update_display(struct tm *t) {
-    static char s_time[5];
-    strftime(s_time, sizeof(s_time), "%H%M", t);
+    static char s_time[6];
+    strftime(s_time, sizeof(s_time),
+             clock_is_24h_style() ? "%H%M" : "%I%M", t);
     text_layer_set_text(s_time_layer, s_time);
 
     static char s_month[4];
     strftime(s_month, sizeof(s_month), "%b", t);
-    for (int i = 0; s_month[i]; i++)
-        if (s_month[i] >= 'a') s_month[i] -= 32;
+    for (int i = 0; s_month[i]; i++) {
+        if (s_month[i] >= 'a' && s_month[i] <= 'z') s_month[i] -= 'a' - 'A';
+    }
     text_layer_set_text(s_month_layer, s_month);
 
     static char s_day[3];
@@ -69,9 +102,11 @@ static void update_display(struct tm *t) {
     text_layer_set_text(s_day_layer, s_day);
 
     static char s_era[8];
-    static char s_year[5];
-    get_wareki(t, s_era, sizeof(s_era), s_year, sizeof(s_year));
-    text_layer_set_text(s_era_layer,  s_era);
+    get_wareki(t, s_era, sizeof(s_era));
+    text_layer_set_text(s_era_layer, s_era);
+
+    static char s_year[6];
+    snprintf(s_year, sizeof(s_year), "%d", t->tm_year + 1900);
     text_layer_set_text(s_year_layer, s_year);
 }
 
@@ -80,131 +115,117 @@ static void tick_handler(struct tm *tick_time, TimeUnits changed) {
 }
 
 // ---------------------------------------------------------------------------
-// 天気 (PebbleKit JS / OpenWeatherMap から AppMessage 経由で受信)
+// 天気 (PebbleKit JS から AppMessage 経由で受信)
 // ---------------------------------------------------------------------------
-static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-    Tuple *temp_t   = dict_find(iterator, MESSAGE_KEY_KEY_TEMPERATURE);
-    Tuple *cond_t   = dict_find(iterator, MESSAGE_KEY_KEY_CONDITIONS);
-    Tuple *pres_t   = dict_find(iterator, MESSAGE_KEY_KEY_PRESSURE);
-    Tuple *fc_temp  = dict_find(iterator, MESSAGE_KEY_KEY_FC_TEMPERATURE);
-    Tuple *fc_cond  = dict_find(iterator, MESSAGE_KEY_KEY_FC_CONDITIONS);
-    Tuple *fc_pres  = dict_find(iterator, MESSAGE_KEY_KEY_FC_PRESSURE);
+static void inbox_received_callback(DictionaryIterator *iter, void *context) {
+    Tuple *temp    = dict_find(iter, MESSAGE_KEY_TEMPERATURE);
+    Tuple *cond    = dict_find(iter, MESSAGE_KEY_CONDITIONS);
+    Tuple *pres    = dict_find(iter, MESSAGE_KEY_PRESSURE);
+    Tuple *fc_temp = dict_find(iter, MESSAGE_KEY_FC_TEMPERATURE);
+    Tuple *fc_cond = dict_find(iter, MESSAGE_KEY_FC_CONDITIONS);
+    Tuple *fc_pres = dict_find(iter, MESSAGE_KEY_FC_PRESSURE);
 
-    if (temp_t && cond_t && pres_t) {
+    if (temp && cond && pres) {
         snprintf(s_weather_now_buf, sizeof(s_weather_now_buf), "%dC, %s, %dhPa",
-                  (int)temp_t->value->int32, cond_t->value->cstring, (int)pres_t->value->int32);
+                 (int)temp->value->int32, cond->value->cstring,
+                 (int)pres->value->int32);
         text_layer_set_text(s_weather_now_layer, s_weather_now_buf);
         persist_write_string(PERSIST_WEATHER_NOW, s_weather_now_buf);
     }
 
     if (fc_temp && fc_cond && fc_pres) {
         snprintf(s_weather_fc_buf, sizeof(s_weather_fc_buf), "%dC, %s, %dhPa",
-                  (int)fc_temp->value->int32, fc_cond->value->cstring, (int)fc_pres->value->int32);
+                 (int)fc_temp->value->int32, fc_cond->value->cstring,
+                 (int)fc_pres->value->int32);
         text_layer_set_text(s_weather_fc_layer, s_weather_fc_buf);
         persist_write_string(PERSIST_WEATHER_FC, s_weather_fc_buf);
     }
 }
 
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped! reason=%d", (int)reason);
+    APP_LOG(APP_LOG_LEVEL_ERROR, "AppMessage dropped: %d", (int)reason);
 }
 
 // ---------------------------------------------------------------------------
-// ウィンドウ  (200 x 228 px, Pebble Time 2 / emery)
+// ウィンドウ
 // ---------------------------------------------------------------------------
+static TextLayer *make_text_layer(Layer *root, GRect frame, const char *font_key,
+                                  GTextAlignment align) {
+    TextLayer *layer = text_layer_create(frame);
+    text_layer_set_background_color(layer, GColorClear);
+    text_layer_set_text_color(layer, GColorWhite);
+    text_layer_set_font(layer, fonts_get_system_font(font_key));
+    text_layer_set_text_alignment(layer, align);
+    layer_add_child(root, text_layer_get_layer(layer));
+    return layer;
+}
+
 static void window_load(Window *window) {
     Layer *root = window_get_root_layer(window);
     GRect bounds = layer_get_bounds(root);
-    int W = bounds.size.w;  // 200
+    const int w = bounds.size.w;
 
-    window_set_background_color(window, GColorOxfordBlue);
+    window_set_background_color(window, GColorBlack);
 
-    // ── 月 (左上) ──
-    s_month_layer = text_layer_create(GRect(4, 8, 110, 40));
-    text_layer_set_background_color(s_month_layer, GColorClear);
-    text_layer_set_text_color(s_month_layer, GColorWhite);
-    text_layer_set_font(s_month_layer,
-        fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
-    text_layer_set_text_alignment(s_month_layer, GTextAlignmentLeft);
-    layer_add_child(root, text_layer_get_layer(s_month_layer));
+    // 1段目: 月 (左) / 日 (右)
+    s_month_layer = make_text_layer(root,
+        GRect(SIDE_MARGIN, ROW_DATE_Y, w / 2, ROW_DATE_H),
+        FONT_KEY_BITHAM_30_BLACK, GTextAlignmentLeft);
+    s_day_layer = make_text_layer(root,
+        GRect(w / 2, ROW_DATE_Y, w / 2 - SIDE_MARGIN, ROW_DATE_H),
+        FONT_KEY_BITHAM_30_BLACK, GTextAlignmentRight);
 
-    // ── 日 (右上) ──
-    s_day_layer = text_layer_create(GRect(W - 4 - 90, 8, 90, 40));
-    text_layer_set_background_color(s_day_layer, GColorClear);
-    text_layer_set_text_color(s_day_layer, GColorWhite);
-    text_layer_set_font(s_day_layer,
-        fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
-    text_layer_set_text_alignment(s_day_layer, GTextAlignmentRight);
-    layer_add_child(root, text_layer_get_layer(s_day_layer));
+    // 2段目: 時刻 (コロンなし)
+    s_time_layer = make_text_layer(root,
+        GRect(0, ROW_TIME_Y, w, ROW_TIME_H),
+        FONT_KEY_ROBOTO_BOLD_SUBSET_49, GTextAlignmentCenter);
 
-    // ── 時刻 (中央) ──
-    s_time_layer = text_layer_create(GRect(0, 54, W, 78));
-    text_layer_set_background_color(s_time_layer, GColorClear);
-    text_layer_set_text_color(s_time_layer, GColorWhite);
-    text_layer_set_font(s_time_layer,
-        fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49));
-    text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
-    layer_add_child(root, text_layer_get_layer(s_time_layer));
+    // 3段目: 和暦 (左) / 西暦 (右)
+    s_era_layer = make_text_layer(root,
+        GRect(SIDE_MARGIN, ROW_ERA_Y, w / 2, ROW_ERA_H),
+        FONT_KEY_BITHAM_30_BLACK, GTextAlignmentLeft);
+    s_year_layer = make_text_layer(root,
+        GRect(w / 2, ROW_ERA_Y, w / 2 - SIDE_MARGIN, ROW_ERA_H),
+        FONT_KEY_BITHAM_30_BLACK, GTextAlignmentRight);
 
-    // ── 和暦元号 (左下) ──
-    s_era_layer = text_layer_create(GRect(4, 136, 90, 40));
-    text_layer_set_background_color(s_era_layer, GColorClear);
-    text_layer_set_text_color(s_era_layer, GColorWhite);
-    text_layer_set_font(s_era_layer,
-        fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
-    text_layer_set_text_alignment(s_era_layer, GTextAlignmentLeft);
-    layer_add_child(root, text_layer_get_layer(s_era_layer));
+    // 大きな文字の上に重ねるステンシル風テクスチャ
+    s_hatch_layer = layer_create(GRect(0, 0, w, HATCH_BOTTOM));
+    layer_set_update_proc(s_hatch_layer, hatch_update_proc);
+    layer_add_child(root, s_hatch_layer);
 
-    // ── 西暦 (右下) ──
-    s_year_layer = text_layer_create(GRect(94, 136, W - 4 - 94, 40));
-    text_layer_set_background_color(s_year_layer, GColorClear);
-    text_layer_set_text_color(s_year_layer, GColorWhite);
-    text_layer_set_font(s_year_layer,
-        fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
-    text_layer_set_text_alignment(s_year_layer, GTextAlignmentRight);
-    layer_add_child(root, text_layer_get_layer(s_year_layer));
-
-    // ── 現在の天気 ──
-    s_weather_now_layer = text_layer_create(GRect(6, 182, W - 12, 20));
-    text_layer_set_background_color(s_weather_now_layer, GColorClear);
-    text_layer_set_text_color(s_weather_now_layer, GColorWhite);
-    text_layer_set_font(s_weather_now_layer,
-        fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
-    text_layer_set_text_alignment(s_weather_now_layer, GTextAlignmentLeft);
+    // 4-5段目: 天気 (テクスチャなし)
+    s_weather_now_layer = make_text_layer(root,
+        GRect(SIDE_MARGIN, ROW_WX_NOW_Y, w - SIDE_MARGIN * 2, ROW_WX_H),
+        FONT_KEY_GOTHIC_18_BOLD, GTextAlignmentLeft);
     text_layer_set_text(s_weather_now_layer, s_weather_now_buf);
-    layer_add_child(root, text_layer_get_layer(s_weather_now_layer));
-
-    // ── 約6時間後の予報 ──
-    s_weather_fc_layer = text_layer_create(GRect(6, 204, W - 12, 20));
-    text_layer_set_background_color(s_weather_fc_layer, GColorClear);
-    text_layer_set_text_color(s_weather_fc_layer, GColorWhite);
-    text_layer_set_font(s_weather_fc_layer,
-        fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
-    text_layer_set_text_alignment(s_weather_fc_layer, GTextAlignmentLeft);
+    s_weather_fc_layer = make_text_layer(root,
+        GRect(SIDE_MARGIN, ROW_WX_FC_Y, w - SIDE_MARGIN * 2, ROW_WX_H),
+        FONT_KEY_GOTHIC_18_BOLD, GTextAlignmentLeft);
     text_layer_set_text(s_weather_fc_layer, s_weather_fc_buf);
-    layer_add_child(root, text_layer_get_layer(s_weather_fc_layer));
 
     time_t now = time(NULL);
-    struct tm *t = localtime(&now);
-    update_display(t);
+    update_display(localtime(&now));
 }
 
 static void window_unload(Window *window) {
-    text_layer_destroy(s_time_layer);
     text_layer_destroy(s_month_layer);
     text_layer_destroy(s_day_layer);
+    text_layer_destroy(s_time_layer);
     text_layer_destroy(s_era_layer);
     text_layer_destroy(s_year_layer);
+    layer_destroy(s_hatch_layer);
     text_layer_destroy(s_weather_now_layer);
     text_layer_destroy(s_weather_fc_layer);
 }
 
 static void init(void) {
     if (persist_exists(PERSIST_WEATHER_NOW)) {
-        persist_read_string(PERSIST_WEATHER_NOW, s_weather_now_buf, sizeof(s_weather_now_buf));
+        persist_read_string(PERSIST_WEATHER_NOW,
+                            s_weather_now_buf, sizeof(s_weather_now_buf));
     }
     if (persist_exists(PERSIST_WEATHER_FC)) {
-        persist_read_string(PERSIST_WEATHER_FC, s_weather_fc_buf, sizeof(s_weather_fc_buf));
+        persist_read_string(PERSIST_WEATHER_FC,
+                            s_weather_fc_buf, sizeof(s_weather_fc_buf));
     }
 
     s_window = window_create();
@@ -213,14 +234,16 @@ static void init(void) {
         .unload = window_unload,
     });
     window_stack_push(s_window, true);
+
     tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 
     app_message_register_inbox_received(inbox_received_callback);
     app_message_register_inbox_dropped(inbox_dropped_callback);
-    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+    app_message_open(256, 64);
 }
 
 static void deinit(void) {
+    tick_timer_service_unsubscribe();
     window_destroy(s_window);
 }
 
