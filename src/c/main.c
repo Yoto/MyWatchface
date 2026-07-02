@@ -9,23 +9,24 @@
 //   3段目: 和暦 (左) / 西暦 (右)
 //   4段目: 現在の天気   例) 17C, Clouds, 1007hPa
 //   5段目: 約6時間後の予報
-// 大きな文字は同梱の Roboto Bold (時刻 80px / 日付・年 44px) で描画し、
+// 大きな文字は同梱の Khand Bold (時刻 100px / 日付・年 54px) で描画し、
 // オリジナルのステンシル風フォントを模した斜め格子 (クロスハッチ) の
 // テクスチャを重ねる。
 // ---------------------------------------------------------------------------
 
 // レイアウト定数 (emery: 200 x 228)
-// 大きな文字はカスタムフォント (Roboto Bold 80 / 44) で描画する。
-// フレームの y はフォントのアセント分 (文字上部の余白) を見込んで詰めてある。
-#define ROW_DATE_Y     (-6)
-#define ROW_DATE_H     58
-#define ROW_TIME_Y     40
-#define ROW_TIME_H     102
-#define ROW_ERA_Y      116
-#define ROW_ERA_H      58
-#define HATCH_BOTTOM   170   // ここまでの領域に格子模様を重ねる
-#define ROW_WX_NOW_Y   174
-#define ROW_WX_FC_Y    200
+// 大きな文字はカスタムフォント (Khand Bold 100 / 54) で描画する。
+// Khand はアセント (1.05em) がキャップハイト (0.693em) より大きく文字の上に
+// 余白が出るため、フレームの y をその分 (0.357em) 上へずらして詰めてある。
+#define ROW_DATE_Y     (-17)
+#define ROW_DATE_H     60
+#define ROW_TIME_Y     9
+#define ROW_TIME_H     112
+#define ROW_ERA_Y      101
+#define ROW_ERA_H      60
+#define HATCH_BOTTOM   162   // ここまでの領域に格子模様を重ねる
+#define ROW_WX_NOW_Y   166
+#define ROW_WX_FC_Y    194
 #define ROW_WX_H       26
 #define SIDE_MARGIN    6
 #define DATE_SPLIT_X   106   // 月/日の境界
@@ -33,8 +34,8 @@
 #define HATCH_STEP     5     // 格子の間隔 (px)
 
 static Window    *s_window;
-static GFont      s_font_big;   // 時刻用 Roboto Bold 80
-static GFont      s_font_med;   // 月日・和暦西暦用 Roboto Bold 44
+static GFont      s_font_big;   // 時刻用 Khand Bold 100
+static GFont      s_font_med;   // 月日・和暦西暦用 Khand Bold 54
 static TextLayer *s_month_layer;
 static TextLayer *s_day_layer;
 static TextLayer *s_time_layer;
@@ -175,9 +176,9 @@ static void window_load(Window *window) {
     window_set_background_color(window, GColorBlack);
 
     s_font_big = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_ROBOTO_BOLD_80));
+        resource_get_handle(RESOURCE_ID_FONT_KHAND_BOLD_100));
     s_font_med = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_ROBOTO_BOLD_44));
+        resource_get_handle(RESOURCE_ID_FONT_KHAND_BOLD_54));
 
     // 1段目: 月 (左) / 日 (右)
     s_month_layer = make_text_layer(root,
