@@ -7,28 +7,28 @@
 //   1段目: 月 (左) / 日 (中央) / 曜日 (右)
 //   2段目: 時刻 (HHMM, コロンなし・大)
 //   3段目: 和暦 (左) / 西暦 (右)
-// 文字は Penn Station (時刻 72px / 和暦西暦 39px / 月日曜日 31px) で描画する。
+// 文字は Black Mustang (時刻 116px / 和暦西暦 62px / 月日曜日 48px) で描画する。
 // ---------------------------------------------------------------------------
 
 // レイアウト定数 (emery: 200 x 228)
-// Penn Station はグリフ上端がアセンダラインに一致するため、フレームの y が
-// そのまま文字上端になる。サイズは最長ケース (0000 / DEC 31 WED / R10 2028)
-// が幅 188px に収まる最大値。
+// Black Mustang はアセント (1.084em) がキャップハイト (0.803em) より大きく
+// 文字の上に余白が出るため、フレームの y をその分 (0.281em) 上へずらしている。
+// サイズは最長ケース (0000 / DEC 31 WED / R10 2028) が幅 188px に収まる最大値。
 // 実機ではベゼル際の数ピクセルが見えないため、上に 12px・下に 6px の
-// 安全マージンを確保し (文字の実描画位置: 12..222)、時刻はその間の中央。
-#define ROW_DATE_Y     12
-#define ROW_DATE_H     40
-#define ROW_TIME_Y     84
-#define ROW_TIME_H     66
-#define ROW_ERA_Y      190
-#define ROW_ERA_H      38
+// 安全マージンを確保している (文字の実描画位置: 12..222)。
+#define ROW_DATE_Y     (-2)
+#define ROW_DATE_H     60
+#define ROW_TIME_Y     40
+#define ROW_TIME_H     132
+#define ROW_ERA_Y      155
+#define ROW_ERA_H      73
 #define SIDE_MARGIN    6
 #define ERA_SPLIT_X    92    // 和暦/西暦の境界
 
 static Window    *s_window;
-static GFont      s_font_big;    // 時刻用 Penn Station 72px
-static GFont      s_font_med;    // 和暦西暦用 Penn Station 39px
-static GFont      s_font_small;  // 月日曜日用 Penn Station 31px
+static GFont      s_font_big;    // 時刻用 Black Mustang 116px
+static GFont      s_font_med;    // 和暦西暦用 Black Mustang 62px
+static GFont      s_font_small;  // 月日曜日用 Black Mustang 48px
 static TextLayer *s_month_layer;
 static TextLayer *s_day_layer;
 static TextLayer *s_weekday_layer;
@@ -120,11 +120,11 @@ static void window_load(Window *window) {
     window_set_background_color(window, GColorBlack);
 
     s_font_big = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_PENN_STATION_72));
+        resource_get_handle(RESOURCE_ID_FONT_BLACK_MUSTANG_116));
     s_font_med = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_PENN_STATION_39));
+        resource_get_handle(RESOURCE_ID_FONT_BLACK_MUSTANG_62));
     s_font_small = fonts_load_custom_font(
-        resource_get_handle(RESOURCE_ID_FONT_PENN_STATION_31));
+        resource_get_handle(RESOURCE_ID_FONT_BLACK_MUSTANG_48));
 
     // 1段目: 月 (左) / 日 (中央) / 曜日 (右)
     s_month_layer = make_text_layer(root,
