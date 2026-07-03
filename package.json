@@ -20,20 +20,20 @@
       "media": [
         {
           "type": "font",
-          "name": "FONT_PENN_STATION_72",
-          "file": "fonts/PennStation.ttf",
+          "name": "FONT_BLACK_MUSTANG_116",
+          "file": "fonts/BlackMustang.ttf",
           "characterRegex": "[0-9]"
         },
         {
           "type": "font",
-          "name": "FONT_PENN_STATION_39",
-          "file": "fonts/PennStation.ttf",
+          "name": "FONT_BLACK_MUSTANG_62",
+          "file": "fonts/BlackMustang.ttf",
           "characterRegex": "[0-9A-Z]"
         },
         {
           "type": "font",
-          "name": "FONT_PENN_STATION_31",
-          "file": "fonts/PennStation.ttf",
+          "name": "FONT_BLACK_MUSTANG_48",
+          "file": "fonts/BlackMustang.ttf",
           "characterRegex": "[0-9A-Z]"
         }
       ]
